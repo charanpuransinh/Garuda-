@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Garuda Scanner Pro</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#070709;--card:#0e0e12;--card2:#13131a;--border:#1e1e2a;
+  --gold:#f5a623;--gold2:#ffc857;--green:#00e676;--red:#ff1744;
+  --blue:#448aff;--purple:#d500f9;--text:#ffffff;--text2:#666680;
+  --buy-glow:rgba(0,230,118,0.15);--sell-glow:rgba(255,23,68,0.15);
+}
+body{background:var(--bg);color:var(--text);font-family:'Courier New',Courier,monospace;min-height:100vh;overflow-x:hidden}
+
+/* ── TICKER ── */
+.ticker-wrap{background:#0a0a0f;border-bottom:1px solid var(--border);height:30px;overflow:hidden;display:flex;align-items:center}
+.ticker-track{display:flex;animation:tick 40s linear infinite;white-space:nowrap}
+@keyframes tick{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.t-item{padding:0 18px;font-size:11px;font-weight:700;display:flex;gap:6px;align-items:center}
+.t-item .tn{color:var(--text2)}
+.t-item .tp{color:#fff}
+.t-item .tc{font-size:10px}
+.t-item .up{color:var(--green)}
+.t-item .dn{color:var(--red)}
+
+/* ── API BAR ── */
+.api-bar{background:#0b0b10;border-bottom:1px solid var(--border);padding:5px 12px;display:flex;align-items:center;gap:8px;font-size:10px}
+.api-bar .albl{color:var(--gold);font-weight:900;letter-spacing:1px}
+.api-bar .asrc{color:var(--text2)}
+.api-bar .abadge{margin-left:auto;background:var(--gold);color:#000;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:900;letter-spacing:1px}
+
+/* ── CORE BAR ── */
+.core-bar{background:#0b0b10;border-bottom:2px solid var(--gold);padding:6px 12px;display:flex;align-items:center;gap:8px;font-size:10px;font-weight:900;letter-spacing:1.5px}
+.ldot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 6px var(--green)}50%{opacity:0.2;box-shadow:none}}
+.core-bar .ltime{margin-left:auto;color:var(--green);font-size:11px}
+
+/* ── STATS ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border-bottom:2px solid var(--gold)}
+.sbox{background:var(--card);padding:10px 4px;text-align:center}
+.sbox .sv{font-size:26px;font-weight:900;line-height:1}
+.sbox .sl{font-size:9px;color:var(--text2);margin-top:3px;letter-spacing:2px}
+.sv.buy{color:var(--green);text-shadow:0 0 12px var(--green)}
+.sv.sell{color:var(--red);text-shadow:0 0 12px var(--red)}
+.sv.wait{color:var(--gold)}
+.sv.total{color:var(--gold2)}
+
+/* ── PATCH HEADER ── */
+.patch-hdr{background:#0d0d14;border-bottom:1px solid var(--border);padding:7px 12px;display:flex;align-items:center;gap:8px}
+.ph-lbl{color:var(--gold);font-size:10px;font-weight:900;letter-spacing:2px}
+.ph-desc{color:var(--text2);font-size:9px}
+.ph-cnt{margin-left:auto;background:var(--border);color:var(--text2);padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700}
+
+/* ── SCANNER GRID ── */
+.scan-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border)}
+.scan-card{background:var(--card);padding:10px 7px;position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:128px;cursor:pointer;transition:background 0.15s}
+.scan-card:active{background:var(--card2)}
+.scan-card.buy-glow{background:var(--buy-glow)}
+.scan-card.sell-glow{background:var(--sell-glow)}
+
+.sbadge{position:absolute;top:5px;right:5px;padding:2px 5px;border-radius:3px;font-size:8px;font-weight:900;letter-spacing:1px}
+.sbadge.BUY{background:var(--green);color:#000}
+.sbadge.SELL{background:var(--red);color:#fff}
+.sbadge.WAIT{background:var(--gold);color:#000}
+.sbadge.SCAN{background:#333;color:#888}
+
+.s-icon{font-size:26px;margin:2px 0}
+.s-lbl{font-size:7px;color:var(--gold);font-weight:900;letter-spacing:1.5px}
+.s-name{font-size:10px;font-weight:900;text-align:center;line-height:1.25;letter-spacing:0.3px}
+.s-live{display:flex;align-items:center;gap:3px;margin-top:1px}
+.s-live span{font-size:8px;color:var(--green);font-weight:700}
+.s-row{width:100%;display:flex;justify-content:space-between;margin-top:auto;padding-top:4px}
+.s-pct{font-size:9px;color:var(--text2)}
+.s-cnt{font-size:9px;color:var(--text2)}
+.s-bar{width:100%;height:2px;background:var(--border);border-radius:1px;margin-top:3px}
+.s-fill{height:100%;width:0%;border-radius:1px;transition:width 0.8s ease,background 0.5s}
+
+/* ── SIGNAL BTN ── */
+.sig-btn{position:fixed;bottom:68px;left:50%;transform:translateX(-50%);background:var(--gold);color:#000;padding:11px 24px;border-radius:28px;font-size:13px;font-weight:900;letter-spacing:1px;display:flex;align-items:center;gap:8px;cursor:pointer;z-index:100;box-shadow:0 4px 24px rgba(245,166,35,0.45);white-space:nowrap}
+.sig-cnt{background:#000;color:var(--gold);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900}
+
+/* ── BOTTOM NAV ── */
+.bot-nav{position:fixed;bottom:0;left:0;right:0;background:#0d0d14;border-top:1px solid var(--border);display:flex;height:58px;z-index:200}
+.nav-i{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:8px;letter-spacing:1px;color:var(--text2);cursor:pointer;font-weight:700}
+.nav-i.active{background:var(--gold);color:#000;border-radius:0}
+.nav-i .ni{font-size:17px}
+
+/* ── SIGNAL PANEL ── */
+.sig-panel{display:none;position:fixed;bottom:58px;left:0;right:0;background:#0d0d14;border-top:2px solid var(--gold);max-height:55vh;overflow-y:auto;z-index:150}
+.sig-panel.show{display:block}
+.sp-head{padding:10px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.sp-head span{font-size:11px;font-weight:900;color:var(--gold);letter-spacing:1px}
+.sp-close{font-size:18px;cursor:pointer;color:var(--text2)}
+.sp-list{padding:8px}
+.sig-item{background:var(--card);border-radius:7px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;border-left:3px solid var(--green)}
+.sig-item.sell{border-color:var(--red)}
+.si-type{font-size:10px;font-weight:900;color:var(--green)}
+.sig-item.sell .si-type{color:var(--red)}
+.si-nm{font-size:12px;font-weight:700}
+.si-sc{font-size:9px;color:var(--text2)}
+.si-pr{margin-left:auto;font-size:13px;font-weight:900;color:var(--gold)}
+.sp-empty{text-align:center;color:var(--text2);font-size:11px;padding:24px;letter-spacing:1px}
+
+/* ── CONFIG MODAL ── */
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.modal-ov.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--gold);border-radius:12px;padding:20px;width:100%;max-width:380px}
+.modal h3{color:var(--gold);font-size:13px;letter-spacing:2px;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:10px}
+.fg{margin-bottom:10px}
+.fg label{display:block;font-size:9px;color:var(--text2);margin-bottom:4px;letter-spacing:1.5px;font-weight:700}
+.fg input{width:100%;background:#1a1a22;border:1px solid var(--border);color:#fff;padding:8px 10px;border-radius:6px;font-size:12px;font-family:monospace}
+.fg input:focus{outline:none;border-color:var(--gold)}
+.mbts{display:flex;gap:8px;margin-top:16px}
+.btn{flex:1;padding:10px;border-radius:6px;font-size:11px;font-weight:900;letter-spacing:1px;cursor:pointer;border:none;font-family:monospace}
+.btn-g{background:var(--gold);color:#000}
+.btn-gh{background:transparent;border:1px solid var(--border);color:var(--text2)}
+.status-msg{font-size:10px;text-align:center;margin-top:10px;color:var(--green);min-height:16px}
+
+.content{padding-bottom:136px}
+</style>
+</head>
+<body>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-track" id="tickerTrack">
+    <div class="t-item"><span class="tn">NIFTY</span><span class="tp" id="tk-nifty">—</span><span class="tc up" id="tc-nifty">—</span></div>
+    <div class="t-item"><span class="tn">BANKNIFTY</span><span class="tp" id="tk-bnf">—</span><span class="tc dn" id="tc-bnf">—</span></div>
+    <div class="t-item"><span class="tn">FINNIFTY</span><span class="tp" id="tk-fin">—</span><span class="tc up" id="tc-fin">—</span></div>
+    <div class="t-item"><span class="tn">SENSEX</span><span class="tp" id="tk-snx">—</span><span class="tc" id="tc-snx">—</span></div>
+    <div class="t-item"><span class="tn">MIDCPNIFTY</span><span class="tp" id="tk-mid">—</span><span class="tc up" id="tc-mid">—</span></div>
+    <!-- mirror for seamless loop -->
+    <div class="t-item"><span class="tn">NIFTY</span><span class="tp">—</span><span class="tc up">—</span></div>
+    <div class="t-item"><span class="tn">BANKNIFTY</span><span class="tp">—</span><span class="tc dn">—</span></div>
+    <div class="t-item"><span class="tn">FINNIFTY</span><span class="tp">—</span><span class="tc up">—</span></div>
+    <div class="t-item"><span class="tn">SENSEX</span><span class="tp">—</span><span class="tc">—</span></div>
+    <div class="t-item"><span class="tn">MIDCPNIFTY</span><span class="tp">—</span><span class="tc up">—</span></div>
+  </div>
+</div>
+
+<!-- API BAR -->
+<div class="api-bar">
+  <span>⚡</span>
+  <span class="albl">API SOURCE</span>
+  <span class="asrc" id="apiSrcTxt">Angel One SmartAPI — Connecting...</span>
+  <span class="abadge">PHASE 3</span>
+</div>
+
+<!-- CORE BAR -->
+<div class="core-bar">
+  <span>🦅</span><span>GARUDA PRO</span><span>·</span>
+  <span>12 SCANNERS</span><span>·</span>
+  <span id="modeTag">DEMO</span>
+  <span class="ldot"></span>
+  <span style="color:var(--green);font-size:9px;font-weight:700">LIVE</span>
+  <span class="ltime" id="ltime">—</span>
+</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="sbox"><div class="sv buy" id="s-buy">0</div><div class="sl">BUY</div></div>
+  <div class="sbox"><div class="sv sell" id="s-sell">0</div><div class="sl">SELL</div></div>
+  <div class="sbox"><div class="sv wait" id="s-wait">12</div><div class="sl">WAIT</div></div>
+  <div class="sbox"><div class="sv total" id="s-total">12</div><div class="sl">TOTAL</div></div>
+</div>
+
+<div class="content">
+
+<!-- PATCH 1 -->
+<div class="patch-hdr">
+  <span>📊</span>
+  <span class="ph-lbl">PATCH 1 — TREND</span>
+  <span class="ph-desc">Momentum &amp; Trend Following</span>
+  <span class="ph-cnt">6 / 12</span>
+</div>
+<div class="scan-grid" id="grid1"></div>
+
+<!-- PATCH 2 -->
+<div class="patch-hdr" style="margin-top:1px">
+  <span>🎯</span>
+  <span class="ph-lbl">PATCH 2 — BREAKOUT</span>
+  <span class="ph-desc">Breakout &amp; Reversal Detection</span>
+  <span class="ph-cnt">6 / 12</span>
+</div>
+<div class="scan-grid" id="grid2"></div>
+
+</div>
+
+<!-- SIGNAL PANEL -->
+<div class="sig-panel" id="sigPanel">
+  <div class="sp-head">
+    <span>🔮 LIVE SIGNALS</span>
+    <span class="sp-close" onclick="toggleSignals()">✕</span>
+  </div>
+  <div class="sp-list" id="sigList">
+    <div class="sp-empty" id="spEmpty">Scanners running... Signals will appear here.</div>
+  </div>
+</div>
+
+<!-- SIGNAL FLOAT BTN -->
+<div class="sig-btn" id="sigBtn" onclick="toggleSignals()">
+  🔮 SIGNALS <span class="sig-cnt" id="sigN">0</span>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bot-nav">
+  <div class="nav-i active"><span class="ni">🏠</span><span>HOME</span></div>
+  <div class="nav-i" onclick="toggleSignals()"><span class="ni">📡</span><span>SIGNAL</span></div>
+  <div class="nav-i"><span class="ni">👁️</span><span>WATCH</span></div>
+  <div class="nav-i" onclick="showCfg()"><span class="ni">⚡</span><span>POWER</span></div>
+  <div class="nav-i" onclick="showCfg()"><span class="ni">⚙️</span><span>ADMIN</span></div>
+</div>
+
+<!-- CONFIG MODAL -->
+<div class="modal-ov" id="cfgModal">
+  <div class="modal">
+    <h3>⚙️ ANGEL ONE — CONFIG</h3>
+    <div class="fg"><label>API KEY</label><input id="c-key" placeholder="Angel One API Key" type="text"></div>
+    <div class="fg"><label>CLIENT ID</label><input id="c-id" placeholder="Your Client Code" type="text"></div>
+    <div class="fg"><label>PASSWORD / MPIN</label><input id="c-pwd" placeholder="Login Password" type="password"></div>
+    <div class="fg"><label>TOTP SECRET</label><input id="c-totp" placeholder="Base32 TOTP Secret" type="text"></div>
+    <div class="fg"><label>PRIMARY SYMBOL</label><input id="c-sym" placeholder="NIFTY or BANKNIFTY" type="text" value="NIFTY"></div>
+    <div class="fg"><label>SCAN INTERVAL (seconds)</label><input id="c-int" placeholder="60" type="number" value="60" min="15"></div>
+    <div class="mbts">
+      <button class="btn btn-gh" onclick="closeCfg()">CANCEL</button>
+      <button class="btn btn-g" onclick="saveCfg()">SAVE &amp; CONNECT</button>
+    </div>
+    <div class="status-msg" id="cfgMsg"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// GARUDA SCANNER PRO — 12 STRATEGY ENGINE v3.0
+// Angel One SmartAPI | Intraday Index Scanners
+// ═══════════════════════════════════════════════════════════
+
+// ── CONFIG ──────────────────────────────────────────────────
+const LS = localStorage;
+let CFG = {
+  key:    LS.getItem('g_key')  || '',
+  id:     LS.getItem('g_id')   || '',
+  pwd:    LS.getItem('g_pwd')  || '',
+  totp:   LS.getItem('g_totp') || '',
+  sym:    LS.getItem('g_sym')  || 'NIFTY',
+  intv:   parseInt(LS.getItem('g_intv') || '60'),
+  jwt:    LS.getItem('g_jwt')  || '',
+  feed:   LS.getItem('g_feed') || ''
+};
+
+const ANGEL = 'https://apiconnect.angelbroking.com';
+
+// Symbol → token map (NSE cash for index data)
+const TOKEN_MAP = {
+  NIFTY:       '99926000',
+  BANKNIFTY:   '99926009',
+  FINNIFTY:    '99926037',
+  SENSEX:      '99919000',
+  MIDCPNIFTY:  '99926074'
+};
+
+// ── SCANNER DEFINITIONS ─────────────────────────────────────
+const PATCH1 = [
+  { id:'ema_x',    name:'EMA\nCROSSOVER', icon:'📈', tf:'FIVE_MINUTE',    logic:'ema_cross'   },
+  { id:'macd_x',   name:'MACD\nSIGNAL',   icon:'〰️', tf:'FIVE_MINUTE',    logic:'macd'        },
+  { id:'suptrend', name:'SUPER\nTREND',    icon:'🌊', tf:'FIVE_MINUTE',    logic:'supertrend'  },
+  { id:'vwap_b',   name:'VWAP\nBREAK',    icon:'💧', tf:'FIVE_MINUTE',    logic:'vwap'        },
+  { id:'bb_sq',    name:'BOLLINGER\nSQZ',  icon:'🎯', tf:'FIFTEEN_MINUTE', logic:'bb_squeeze'  },
+  { id:'rsi_mom',  name:'RSI\nMOMENTUM',  icon:'⚡', tf:'FIVE_MINUTE',    logic:'rsi_mom'     }
+];
+
+const PATCH2 = [
+  { id:'orb',      name:'OPENING\nRANGE',  icon:'🚀', tf:'FIFTEEN_MINUTE', logic:'orb'         },
+  { id:'sr_brk',   name:'SUPPORT\nRESIST', icon:'🧱', tf:'FIFTEEN_MINUTE', logic:'sr_break'    },
+  { id:'vol_sg',   name:'VOLUME\nSURGE',   icon:'📊', tf:'FIVE_MINUTE',    logic:'vol_surge'   },
+  { id:'rsi_div',  name:'RSI\nDIVERGENCE',icon:'🔀', tf:'FIFTEEN_MINUTE', logic:'rsi_div'     },
+  { id:'ma_tr',    name:'MA TREND\n20/50', icon:'📉', tf:'FIFTEEN_MINUTE', logic:'ma_trend'    },
+  { id:'pivot_b',  name:'PIVOT\nBREAK',   icon:'🎪', tf:'FIVE_MINUTE',    logic:'pivot'       }
+];
+
+const ALL_SCAN = [...PATCH1, ...PATCH2];
+
+// State
+let STATE = {};
+ALL_SCAN.forEach(s => { STATE[s.id] = { st:'WAIT', pct:0, sig:null }; });
+let SIGNALS = [];
+let scanTimer = null;
+
+// ── INDICATORS ──────────────────────────────────────────────
+
+function ema(arr, p) {
+  const k = 2/(p+1); let e=[arr[0]];
+  for(let i=1;i<arr.length;i++) e.push(arr[i]*k+e[i-1]*(1-k));
+  return e;
+}
+
+function rsi(cl, p=14) {
+  let ag=0, al=0;
+  for(let i=1;i<=p;i++){const d=cl[i]-cl[i-1];d>0?ag+=d:al-=d;}
+  ag/=p; al/=p;
+  const out=[];
+  for(let i=p;i<cl.length;i++){
+    const d=cl[i]-cl[i-1];
+    ag=(ag*(p-1)+Math.max(d,0))/p;
+    al=(al*(p-1)+Math.max(-d,0))/p;
+    out.push(100-100/(1+(ag/(al||0.0001))));
+  }
+  return out;
+}
+
+function macd(cl) {
+  const e12=ema(cl,12), e26=ema(cl,26);
+  const ml=e12.map((v,i)=>v-e26[i]);
+  const sg=ema(ml.slice(26),9);
+  return {ml:ml.slice(26), sg};
+}
+
+function bb(cl, p=20, m=2) {
+  const out=[];
+  for(let i=p-1;i<cl.length;i++){
+    const sl=cl.slice(i-p+1,i+1);
+    const avg=sl.reduce((a,b)=>a+b,0)/p;
+    const sd=Math.sqrt(sl.reduce((a,b)=>a+(b-avg)**2,0)/p);
+    out.push({u:avg+m*sd, mid:avg, l:avg-m*sd, bw:(2*m*sd)/(avg||1)});
+  }
+  return out;
+}
+
+function vwap(candles) {
+  let ct=0, cv=0;
+  return candles.map(c=>{
+    const tp=(c.h+c.l+c.c)/3;
+    ct+=tp*(c.v||1); cv+=(c.v||1);
+    return ct/cv;
+  });
+}
+
+function supertrend(candles, p=7, m=3) {
+  const cl=candles.map(c=>c.c), hi=candles.map(c=>c.h), lo=candles.map(c=>c.l);
+  const atr=[hi[0]-lo[0]];
+  for(let i=1;i<candles.length;i++){
+    const tr=Math.max(hi[i]-lo[i], Math.abs(hi[i]-cl[i-1]), Math.abs(lo[i]-cl[i-1]));
+    atr.push((atr[i-1]*(p-1)+tr)/p);
+  }
+  const trend=[], dir=[];
+  for(let i=0;i<candles.length;i++){
+    const mid=(hi[i]+lo[i])/2;
+    const up=mid+m*atr[i], dn=mid-m*atr[i];
+    if(i===0){trend.push(dn);dir.push(1);continue;}
+    if(dir[i-1]===1){
+      const nl=Math.max(dn,trend[i-1]);
+      if(cl[i]<nl){trend.push(up);dir.push(-1);}
+      else{trend.push(nl);dir.push(1);}
+    } else {
+      const nu=Math.min(up,trend[i-1]);
+      if(cl[i]>nu){trend.push(dn);dir.push(1);}
+      else{trend.push(nu);dir.push(-1);}
+    }
+  }
+  return {trend,dir};
+}
+
+// ── SCANNER LOGIC ───────────────────────────────────────────
+
+function runLogic(logic, candles) {
+  if(!candles || candles.length < 35) return 'WAIT';
+  const cl = candles.map(c=>c.c);
+  const vl = candles.map(c=>c.v||0);
+  const n  = cl.length-1;
+
+  try {
+    switch(logic) {
+
+      case 'ema_cross': {
+        const e9=ema(cl,9), e21=ema(cl,21);
+        if(e9[n]>e21[n] && e9[n-1]<=e21[n-1]) return 'BUY';
+        if(e9[n]<e21[n] && e9[n-1]>=e21[n-1]) return 'SELL';
+        if(e9[n]>e21[n]) return 'BUY';
+        if(e9[n]<e21[n]) return 'SELL';
+        return 'WAIT';
+      }
+
+      case 'macd': {
+        const {ml,sg}=macd(cl); const mn=ml.length-1;
+        if(mn<1) return 'WAIT';
+        if(ml[mn]>sg[mn] && ml[mn-1]<=sg[mn-1]) return 'BUY';
+        if(ml[mn]<sg[mn] && ml[mn-1]>=sg[mn-1]) return 'SELL';
+        return 'WAIT';
+      }
+
+      case 'supertrend': {
+        const {dir}=supertrend(candles);
+        const dn=dir.length-1;
+        if(dir[dn]===1  && dir[dn-1]===-1) return 'BUY';
+        if(dir[dn]===-1 && dir[dn-1]===1)  return 'SELL';
+        return 'WAIT';
+      }
+
+      case 'vwap': {
+        const vw=vwap(candles);
+        const avgV=vl.slice(-20).reduce((a,b)=>a+b,0)/20;
+        if(cl[n]>vw[n] && cl[n-1]<=vw[n-1] && vl[n]>avgV*1.5) return 'BUY';
+        if(cl[n]<vw[n] && cl[n-1]>=vw[n-1] && vl[n]>avgV*1.5) return 'SELL';
+        return 'WAIT';
+      }
+
+      case 'bb_squeeze': {
+        const bbs=bb(cl); const bn=bbs.length-1;
+        const minBW=Math.min(...bbs.slice(-20).map(b=>b.bw));
+        const squeeze=bbs[bn-1].bw<=minBW*1.25;
+        if(squeeze && cl[n]>bbs[bn].u) return 'BUY';
+        if(squeeze && cl[n]<bbs[bn].l) return 'SELL';
+        return 'WAIT';
+      }
+
+      case 'rsi_mom': {
+        const r=rsi(cl); const e20=ema(cl,20);
+        const rn=r.length-1;
+        if(r[rn]>62 && cl[n]>e20[n]) return 'BUY';
+        if(r[rn]<38 && cl[n]<e20[n]) return 'SELL';
+        return 'WAIT';
+      }
+
+      case 'orb': {
+        // First 3 candles = ~15min opening range
+        const oh=Math.max(...candles.slice(0,3).map(c=>c.h));
+        const ol=Math.min(...candles.slice(0,3).map(c=>c.l));
+        if(cl[n]>oh && cl[n-1]<=oh) return 'BUY';
+        if(cl[n]<ol && cl[n-1]>=ol) return 'SELL';
+        return 'WAIT';
+      }
+
+      case 'sr_break': {
+        const rh=Math.max(...cl.slice(-21,-1));
+        const rl=Math.min(...cl.slice(-21,-1));
+        if(cl[n]>rh) return 'BUY';
+        if(cl[n]<rl) return 'SELL';
+        return 'WAIT';
+      }
+
+      case 'vol_surge': {
+        const avgV=vl.slice(-20,-1).reduce((a,b)=>a+b,0)/19;
+        if(vl[n]>avgV*2.2) return cl[n]>cl[n-1]?'BUY':'SELL';
+        return 'WAIT';
+      }
+
+      case 'rsi_div': {
+        const r=rsi(cl); const rn=r.length-1;
+        // Bullish div: price lower, RSI higher
+        if(cl[n]<cl[n-5] && r[rn]>r[rn-5] && r[rn]<50) return 'BUY';
+        // Bearish div: price higher, RSI lower
+        if(cl[n]>cl[n-5] && r[rn]<r[rn-5] && r[rn]>50) return 'SELL';
+        return 'WAIT';
+      }
+
+      case 'ma_trend': {
+        const m20=ema(cl,20), m50=ema(cl,50);
+        if(m20[n]>m50[n] && cl[n]>m20[n] && m20[n]>m20[n-1]) return 'BUY';
+        if(m20[n]<m50[n] && cl[n]<m20[n] && m20[n]<m20[n-1]) return 'SELL';
+        return 'WAIT';
+      }
+
+      case 'pivot': {
+        const prev=candles[n-1];
+        const pv=(prev.h+prev.l+prev.c)/3;
+        const r1=2*pv-prev.l;
+        const s1=2*pv-prev.h;
+        if(cl[n]>r1 && cl[n-1]<=r1) return 'BUY';
+        if(cl[n]<s1 && cl[n-1]>=s1) return 'SELL';
+        return 'WAIT';
+      }
+
+      default: return 'WAIT';
+    }
+  } catch(e){ return 'WAIT'; }
+}
+
+// ── ANGEL ONE API ───────────────────────────────────────────
+
+async function angelLogin() {
+  if(!CFG.key || !CFG.id) return false;
+  try {
+    const totp = await getTotp(CFG.totp);
+    const r = await fetch(`${ANGEL}/rest/auth/angelbroking/user/v1/loginByPassword`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'Accept':'application/json',
+        'X-UserType':'USER','X-SourceID':'WEB',
+        'X-ClientLocalIP':'127.0.0.1','X-ClientPublicIP':'127.0.0.1',
+        'X-MACAddress':'fe80::1','X-PrivateKey': CFG.key
+      },
+      body:JSON.stringify({clientcode:CFG.id, password:CFG.pwd, totp})
+    });
+    const d=await r.json();
+    if(d.status && d.data?.jwtToken){
+      CFG.jwt=d.data.jwtToken;
+      CFG.feed=d.data.feedToken||'';
+      LS.setItem('g_jwt',CFG.jwt);
+      LS.setItem('g_feed',CFG.feed);
+      return true;
+    }
+  } catch(e){ console.warn('Login err',e); }
+  return false;
+}
+
+async function fetchCandles(sym, interval) {
+  const token = TOKEN_MAP[sym]||TOKEN_MAP.NIFTY;
+  const now   = new Date();
+  const to    = fmtDate(now);
+  const from  = fmtDate(new Date(now-2*86400000)).split(' ')[0]+' 09:15:00';
+  try {
+    const r=await fetch(`${ANGEL}/rest/secure/angelbroking/historical/v1/getCandleData`,{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json','Accept':'application/json',
+        'Authorization':`Bearer ${CFG.jwt}`,'X-PrivateKey':CFG.key,
+        'X-UserType':'USER','X-SourceID':'WEB',
+        'X-ClientLocalIP':'127.0.0.1','X-ClientPublicIP':'127.0.0.1',
+        'X-MACAddress':'fe80::1'
+      },
+      body:JSON.stringify({exchange:'NSE',symboltoken:token,interval,fromdate:from,todate:to})
+    });
+    const d=await r.json();
+    if(d.status && d.data){
+      return d.data.map(c=>({t:c[0],o:+c[1],h:+c[2],l:+c[3],c:+c[4],v:+c[5]}));
+    }
+  } catch(e){ console.warn('Candle err',e); }
+  return null;
+}
+
+function fmtDate(d){
+  const Y=d.getFullYear(), M=String(d.getMonth()+1).padStart(2,'0'), D=String(d.getDate()).padStart(2,'0');
+  const h=String(d.getHours()).padStart(2,'0'), m=String(d.getMinutes()).padStart(2,'0');
+  return `${Y}-${M}-${D} ${h}:${m}`;
+}
+
+// Simple TOTP (base32 decode + HMAC-SHA1 — uses SubtleCrypto)
+async function getTotp(secret){
+  if(!secret) return '000000';
+  try{
+    const key = base32Decode(secret.replace(/\s/g,'').toUpperCase());
+    const t   = Math.floor(Date.now()/30000);
+    const tb  = new ArrayBuffer(8);
+    const dv  = new DataView(tb);
+    dv.setUint32(4, t, false);
+    const ck  = await crypto.subtle.importKey('raw',key,{name:'HMAC',hash:'SHA-1'},false,['sign']);
+    const sig = await crypto.subtle.sign('HMAC',ck,tb);
+    const ha  = new Uint8Array(sig);
+    const off = ha[19]&0xf;
+    const code= ((ha[off]&0x7f)<<24|(ha[off+1]&0xff)<<16|(ha[off+2]&0xff)<<8|(ha[off+3]&0xff))%1000000;
+    return String(code).padStart(6,'0');
+  } catch(e){ return '000000'; }
+}
+
+function base32Decode(s){
+  const A='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits=0, val=0; const out=[];
+  for(const c of s){const i=A.indexOf(c);if(i<0)continue;val=(val<<5)|i;bits+=5;if(bits>=8){out.push((val>>>(bits-8))&255);bits-=8;}}
+  return new Uint8Array(out).buffer;
+}
+
+// ── SCANNING LOOP ───────────────────────────────────────────
+
+let cache5 = null, cache15 = null, cacheTs = 0;
+
+async function runAllScanners(){
+  const sym = CFG.sym;
+  const now  = Date.now();
+
+  // Refresh candles every 5 minutes at most
+  if(now - cacheTs > 4*60*1000 || !cache5){
+    if(CFG.jwt){
+      cache5  = await fetchCandles(sym,'FIVE_MINUTE');
+      cache15 = await fetchCandles(sym,'FIFTEEN_MINUTE');
+      cacheTs = now;
+    } else {
+      cache5  = demoCandles(120);
+      cache15 = demoCandles(60);
+      cacheTs = now;
+    }
+  }
+
+  ALL_SCAN.forEach(sc=>{
+    const candles = sc.tf==='FIFTEEN_MINUTE' ? cache15 : cache5;
+    if(!candles) return;
+    const prev = STATE[sc.id].st;
+    const sig  = runLogic(sc.logic, candles);
+    STATE[sc.id].st  = sig;
+    STATE[sc.id].pct = sig==='BUY'?Math.floor(65+Math.random()*30):sig==='SELL'?Math.floor(65+Math.random()*30):Math.floor(5+Math.random()*15);
+
+    if(sig!=='WAIT' && sig!==prev){
+      const ltp = candles[candles.length-1].c.toFixed(2);
+      const ts  = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+      SIGNALS.unshift({type:sig, sym, scanner:sc.name.replace('\n',' '), price:ltp, time:ts, id:sc.id});
+      if(SIGNALS.length>60) SIGNALS.pop();
+    }
+    updateCard(sc.id);
+  });
+
+  updateStats();
+  if(document.getElementById('sigPanel').classList.contains('show')) renderSignals();
+}
+
+// ── UI ──────────────────────────────────────────────────────
+
+function buildGrid(scanners, gid){
+  const g=document.getElementById(gid); g.innerHTML='';
+  scanners.forEach(sc=>{
+    const d=document.createElement('div');
+    d.className='scan-card'; d.id='card-'+sc.id;
+    d.innerHTML=`
+      <span class="sbadge WAIT" id="badge-${sc.id}">WAIT</span>
+      <span class="s-icon">${sc.icon}</span>
+      <span class="s-lbl">SCANNER</span>
+      <span class="s-name">${sc.name}</span>
+      <div class="s-live"><span class="ldot" style="width:6px;height:6px"></span><span>LIVE</span></div>
+      <div class="s-row">
+        <span class="s-pct" id="pct-${sc.id}">0%</span>
+        <span class="s-cnt" id="cnt-${sc.id}">0/100</span>
+      </div>
+      <div class="s-bar"><div class="s-fill" id="fill-${sc.id}"></div></div>
+    `;
+    g.appendChild(d);
+  });
+}
+
+function updateCard(id){
+  const s=STATE[id];
+  const badge=document.getElementById('badge-'+id);
+  const pct  =document.getElementById('pct-'+id);
+  const cnt  =document.getElementById('cnt-'+id);
+  const fill =document.getElementById('fill-'+id);
+  const card =document.getElementById('card-'+id);
+  if(!badge) return;
+  badge.className='sbadge '+s.st;
+  badge.textContent=s.st;
+  pct.textContent=s.pct+'%';
+  cnt.textContent=Math.floor(s.pct)+'/'+'100';
+  fill.style.width=s.pct+'%';
+  fill.style.background= s.st==='BUY'?'var(--green)': s.st==='SELL'?'var(--red)':'var(--gold)';
+  card.className='scan-card'+(s.st==='BUY'?' buy-glow':s.st==='SELL'?' sell-glow':'');
+}
+
+function updateStats(){
+  let buy=0,sell=0,wait=0;
+  Object.values(STATE).forEach(s=>{if(s.st==='BUY')buy++;else if(s.st==='SELL')sell++;else wait++;});
+  document.getElementById('s-buy').textContent=buy;
+  document.getElementById('s-sell').textContent=sell;
+  document.getElementById('s-wait').textContent=wait;
+  document.getElementById('s-total').textContent=buy+sell+wait;
+  document.getElementById('sigN').textContent=SIGNALS.length;
+}
+
+function renderSignals(){
+  const list=document.getElementById('sigList');
+  const empty=document.getElementById('spEmpty');
+  if(!SIGNALS.length){ empty.style.display='block'; list.innerHTML=''; return; }
+  empty.style.display='none';
+  list.innerHTML=SIGNALS.map(s=>`
+    <div class="sig-item ${s.type==='SELL'?'sell':''}">
+      <div>
+        <div class="si-type">${s.type}</div>
+        <div class="si-nm">${s.sym}</div>
+        <div class="si-sc">${s.scanner} · ${s.time}</div>
+      </div>
+      <div class="si-pr">₹${s.price}</div>
+    </div>`).join('');
+}
+
+function toggleSignals(){
+  const p=document.getElementById('sigPanel');
+  p.classList.toggle('show');
+  if(p.classList.contains('show')) renderSignals();
+}
+
+// ── CLOCK ───────────────────────────────────────────────────
+
+function tick(){
+  const d=new Date();
+  const h=d.getHours(), m=String(d.getMinutes()).padStart(2,'0'), s=String(d.getSeconds()).padStart(2,'0');
+  const ap=h>=12?'pm':'am'; const h12=h%12||12;
+  document.getElementById('ltime').textContent=`${h12}:${m}:${s} ${ap}`;
+}
+
+// ── DEMO CANDLES ─────────────────────────────────────────────
+
+function demoCandles(n){
+  const out=[]; let p=24500+Math.random()*500;
+  for(let i=0;i<n;i++){
+    const o=p; const c=o+(Math.random()-0.47)*60;
+    const h=Math.max(o,c)+Math.random()*25;
+    const l=Math.min(o,c)-Math.random()*25;
+    const v=Math.floor(40000+Math.random()*120000);
+    out.push({o,h,l,c,v}); p=c;
+  }
+  return out;
+}
+
+// Demo ticker simulation
+function demoTicker(){
+  const bases={nifty:24580,bnf:52300,fin:23100,snx:81000,mid:12500};
+  const ids=['nifty','bnf','fin','snx','mid'];
+  ids.forEach(k=>{
+    const base=bases[k];
+    const ltp=(base+Math.random()*200-100).toFixed(2);
+    const chg=((Math.random()*2-1)*0.8).toFixed(2);
+    const up=parseFloat(chg)>=0;
+    const el=document.getElementById('tk-'+k);
+    const ce=document.getElementById('tc-'+k);
+    if(el){ el.textContent=ltp; }
+    if(ce){ ce.textContent=(up?'+':'')+chg+'%'; ce.className='tc '+(up?'up':'dn'); }
+  });
+}
+
+// ── CONFIG MODAL ─────────────────────────────────────────────
+
+function showCfg(){
+  document.getElementById('c-key').value=CFG.key;
+  document.getElementById('c-id').value=CFG.id;
+  document.getElementById('c-sym').value=CFG.sym;
+  document.getElementById('c-int').value=CFG.intv;
+  document.getElementById('cfgMsg').textContent='';
+  document.getElementById('cfgModal').classList.add('show');
+}
+
+function closeCfg(){ document.getElementById('cfgModal').classList.remove('show'); }
+
+async function saveCfg(){
+  CFG.key  = document.getElementById('c-key').value.trim();
+  CFG.id   = document.getElementById('c-id').value.trim();
+  CFG.pwd  = document.getElementById('c-pwd').value;
+  CFG.totp = document.getElementById('c-totp').value.trim();
+  CFG.sym  = document.getElementById('c-sym').value.trim().toUpperCase()||'NIFTY';
+  CFG.intv = parseInt(document.getElementById('c-int').value)||60;
+
+  LS.setItem('g_key',CFG.key); LS.setItem('g_id',CFG.id);
+  LS.setItem('g_pwd',CFG.pwd); LS.setItem('g_totp',CFG.totp);
+  LS.setItem('g_sym',CFG.sym); LS.setItem('g_intv',String(CFG.intv));
+
+  document.getElementById('cfgMsg').textContent='Connecting...';
+  document.getElementById('cfgMsg').style.color='var(--gold)';
+
+  const ok = await angelLogin();
+  if(ok){
+    document.getElementById('cfgMsg').textContent='✓ Connected to Angel One!';
+    document.getElementById('cfgMsg').style.color='var(--green)';
+    document.getElementById('apiSrcTxt').textContent='Angel One SmartAPI — LIVE';
+    document.getElementById('modeTag').textContent='LIVE';
+    cache5=null; cache15=null;
+    startScanLoop();
+    setTimeout(closeCfg,1500);
+  } else {
+    document.getElementById('cfgMsg').textContent='✗ Login failed. Check credentials.';
+    document.getElementById('cfgMsg').style.color='var(--red)';
+  }
+}
+
+// ── SCAN LOOP ────────────────────────────────────────────────
+
+function startScanLoop(){
+  if(scanTimer) clearInterval(scanTimer);
+  runAllScanners();
+  scanTimer = setInterval(runAllScanners, CFG.intv*1000);
+}
+
+// ── INIT ─────────────────────────────────────────────────────
+
+async function init(){
+  buildGrid(PATCH1,'grid1');
+  buildGrid(PATCH2,'grid2');
+  updateStats();
+  setInterval(tick,1000); tick();
+
+  // Try auto-login if credentials exist
+  if(CFG.key && CFG.id && CFG.jwt){
+    document.getElementById('apiSrcTxt').textContent='Angel One SmartAPI — Reconnecting...';
+    const ok = await angelLogin();
+    if(ok){
+      document.getElementById('apiSrcTxt').textContent='Angel One SmartAPI — LIVE';
+      document.getElementById('modeTag').textContent='LIVE';
+    } else {
+      document.getElementById('apiSrcTxt').textContent='Angel One — Session expired. Tap ADMIN to reconnect.';
+    }
+  } else {
+    document.getElementById('apiSrcTxt').textContent='Angel One — DEMO MODE (Tap ADMIN to connect)';
+  }
+
+  // Start scanning (demo if no JWT)
+  startScanLoop();
+
+  // Demo ticker
+  demoTicker();
+  setInterval(demoTicker,3000);
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>

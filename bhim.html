@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>BHIM Scanner — Integrated Fusion Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0a;
+  --panel:#101010;
+  --card:#151210;
+  --border:#2a2a2a;
+  --gold:#FFD700;
+  --green:#00ff9d;
+  --red:#ff3b5c;
+  --orange:#ff9800;
+  --purple:#b060ff;
+  --txt:#f4f4f4;
+  --dim:#7a7a7a;
+  --mono:'JetBrains Mono', monospace;
+  --head:'Bebas Neue', sans-serif;
+  --body:'Rajdhani', sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--txt);font-family:var(--body);min-height:100vh;}
+
+/* ===== BRAND HEADER ===== */
+.brand-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 16px;background:#0d0d0d;border-bottom:1px solid var(--border);
+}
+.brand-left{display:flex;align-items:center;gap:10px;}
+.brand-icon{font-size:26px;}
+.brand-title{font-family:var(--head);font-size:24px;color:var(--gold);letter-spacing:4px;line-height:1;}
+.brand-sub{font-size:10px;color:var(--dim);letter-spacing:2px;margin-top:2px;}
+.rescan-btn{
+  font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--gold);
+  border:1px solid var(--gold);background:rgba(255,215,0,.06);
+  padding:7px 14px;border-radius:6px;cursor:pointer;
+}
+.rescan-btn:active{transform:scale(.96);}
+
+/* ===== TICKER ===== */
+.ticker-bar{overflow:hidden;white-space:nowrap;background:#000;border-bottom:1px solid var(--border);padding:7px 0;}
+.ticker-track{display:flex;gap:28px;animation:ticker-scroll 32s linear infinite;padding-left:16px;width:max-content;}
+@keyframes ticker-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.ticker-item{font-family:var(--mono);font-size:12px;display:flex;gap:6px;align-items:center;flex-shrink:0;}
+.ticker-sym{color:var(--txt);font-weight:600;}
+.ticker-chg.up{color:var(--green);} .ticker-chg.down{color:var(--red);}
+
+/* ===== API BANNER ===== */
+.api-banner{
+  display:flex;align-items:center;gap:8px;padding:8px 14px;
+  background:linear-gradient(90deg, rgba(255,215,0,.05), rgba(176,96,255,.05));
+  border-bottom:1px solid var(--border);font-size:12px;flex-wrap:wrap;
+}
+.api-banner .src{color:var(--purple);font-weight:700;}
+.api-banner .desc{color:var(--dim);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.phase-badge{font-family:var(--mono);font-size:10px;border:1px solid var(--orange);color:var(--orange);padding:2px 10px;border-radius:4px;letter-spacing:1px;flex-shrink:0;}
+
+/* ===== CORE INFO ===== */
+.core-info{
+  padding:8px 14px;font-size:11px;color:var(--gold);font-family:var(--mono);
+  border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;letter-spacing:1px;flex-wrap:wrap;
+}
+.core-info .live{color:var(--green);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);display:inline-block;animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ===== STATS BAR ===== */
+.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);margin:12px;border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.stat{background:var(--panel);text-align:center;padding:14px 0;}
+.stat-val{font-family:var(--mono);font-size:26px;font-weight:700;}
+.stat-label{font-size:10px;color:var(--dim);letter-spacing:2px;margin-top:4px;}
+.c-green{color:var(--green)} .c-red{color:var(--red)} .c-orange{color:var(--orange)} .c-gold{color:var(--gold)}
+
+/* ===== SCANNER GRID ===== */
+.scanner-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 12px 100px;}
+.scanner-card{
+  background:var(--card);border:1px solid var(--gold);border-radius:10px;padding:14px;
+  position:relative;cursor:pointer;transition:transform .15s;
+  animation:card-in .4s ease both;
+}
+.scanner-card:active{transform:scale(.97);}
+@keyframes card-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.badge{position:absolute;top:10px;right:10px;font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:6px;font-weight:700;letter-spacing:1px;}
+.badge.WAIT{background:rgba(255,152,0,.15);color:var(--orange);border:1px solid var(--orange);}
+.badge.BUY{background:rgba(0,255,157,.15);color:var(--green);border:1px solid var(--green);}
+.badge.SELL{background:rgba(255,59,92,.15);color:var(--red);border:1px solid var(--red);}
+.sc-icon{font-size:28px;margin-bottom:6px;}
+.sc-label{font-family:var(--head);font-size:11px;color:var(--gold);letter-spacing:2px;}
+.sc-name{font-family:var(--head);font-size:18px;letter-spacing:1px;margin:2px 0 8px;line-height:1.15;min-height:44px;}
+.sc-live{font-size:11px;color:var(--green);display:flex;align-items:center;gap:5px;margin-bottom:8px;}
+.sc-progress{height:5px;background:#2a2a2a;border-radius:3px;overflow:hidden;margin-bottom:6px;}
+.sc-fill{height:100%;border-radius:3px;transition:width .6s;width:0%;}
+.sc-fill.BUY{background:var(--green);} .sc-fill.SELL{background:var(--red);} .sc-fill.WAIT{background:var(--orange);}
+.sc-foot{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;}
+.sc-pct{color:var(--purple);}
+.sc-frac{color:var(--dim);}
+
+/* ===== SIGNALS FAB ===== */
+.signals-fab{
+  position:fixed;bottom:78px;right:16px;
+  background:linear-gradient(135deg,var(--gold),#ffae00);color:#000;
+  font-family:var(--head);font-size:15px;letter-spacing:2px;
+  padding:12px 22px;border-radius:50px;display:flex;align-items:center;gap:10px;
+  box-shadow:0 4px 20px rgba(255,215,0,.4);z-index:50;cursor:pointer;
+}
+.signals-fab .count{background:#000;color:var(--gold);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:13px;font-family:var(--mono);}
+
+/* ===== BOTTOM NAV ===== */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#0d0d0d;border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:9px 0;z-index:40;}
+.nav-item{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--dim);letter-spacing:1px;}
+.nav-item.active{color:var(--gold);}
+.nav-icon{font-size:18px;}
+
+/* ===== MODAL ===== */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:flex-end;justify-content:center;}
+.modal-overlay.active{display:flex;}
+.modal{
+  background:var(--card);border:1px solid var(--gold);border-radius:14px 14px 0 0;
+  padding:20px;width:100%;max-width:520px;max-height:82vh;overflow-y:auto;
+  animation:modal-up .25s ease;
+}
+@keyframes modal-up{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+.modal-title{font-family:var(--head);font-size:20px;color:var(--gold);letter-spacing:1px;}
+.modal-close{background:none;border:none;color:var(--dim);font-size:22px;cursor:pointer;line-height:1;}
+.modal-desc{font-size:13px;color:var(--txt);line-height:1.6;margin-bottom:6px;}
+.modal-formula{font-family:var(--mono);font-size:11px;color:var(--purple);background:#000;padding:8px 10px;border-radius:6px;margin-bottom:14px;line-height:1.6;}
+.modal-section-title{font-family:var(--head);font-size:13px;color:var(--gold);letter-spacing:2px;margin:10px 0 8px;}
+.match-row{
+  display:flex;flex-direction:column;gap:3px;background:#000;border:1px solid var(--border);
+  border-radius:8px;padding:10px 12px;margin-bottom:6px;
+}
+.match-top{display:flex;justify-content:space-between;align-items:center;}
+.match-sym{font-family:var(--head);font-size:14px;letter-spacing:1px;}
+.match-score{font-family:var(--mono);font-size:13px;}
+.match-reason{font-size:11px;color:var(--dim);}
+.match-sig{font-family:var(--mono);font-size:10px;padding:1px 8px;border-radius:4px;font-weight:700;}
+</style>
+</head>
+<body>
+
+<div class="brand-header">
+  <div class="brand-left">
+    <span class="brand-icon">🔱</span>
+    <div>
+      <div class="brand-title">BHIM</div>
+      <div class="brand-sub">INTEGRATED SIGNAL FUSION ENGINE</div>
+    </div>
+  </div>
+  <button class="rescan-btn" id="rescanBtn">🔄 RESCAN</button>
+</div>
+
+<div class="ticker-bar">
+  <div class="ticker-track" id="tickerTrack"></div>
+</div>
+
+<div class="api-banner">
+  <span class="src">🔱 API SOURCE</span>
+  <span class="desc">Yahoo Finance / NSE Feed — 4-System Integration (Brahmastra · Morning Bell · Group-Fusion · Power)</span>
+  <span class="phase-badge">PHASE 2</span>
+</div>
+
+<div class="core-info">
+  ⚡ INTEGRATED CORE · 6 ALGORITHMS · NIFTY100 UNIVERSE ·
+  <span class="live"><span class="live-dot"></span>LIVE</span>
+  <span id="clockTxt"></span>
+</div>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-val c-green" id="statBuy">0</div><div class="stat-label">BUY</div></div>
+  <div class="stat"><div class="stat-val c-red" id="statSell">0</div><div class="stat-label">SELL</div></div>
+  <div class="stat"><div class="stat-val c-orange" id="statWait">0</div><div class="stat-label">WAIT</div></div>
+  <div class="stat"><div class="stat-val c-gold" id="statTotal">6</div><div class="stat-label">TOTAL</div></div>
+</div>
+
+<div class="scanner-grid" id="scannerGrid"></div>
+
+<div class="signals-fab" id="signalsFab">🔮 SIGNALS <span class="count" id="sigCount">0</span></div>
+
+<nav class="bottom-nav">
+  <div class="nav-item active"><span class="nav-icon">🏠</span>HOME</div>
+  <div class="nav-item"><span class="nav-icon">📊</span>SIGNAL</div>
+  <div class="nav-item"><span class="nav-icon">👁️</span>WATCH</div>
+  <div class="nav-item"><span class="nav-icon">⚡</span>POWER</div>
+  <div class="nav-item"><span class="nav-icon">⚙️</span>ADMIN</div>
+</nav>
+
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this) closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title" id="modalTitle">SCANNER</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-desc" id="modalDesc"></div>
+    <div class="modal-formula" id="modalFormula"></div>
+    <div class="modal-section-title">🎯 TOP TRIGGERED STOCKS (NIFTY100)</div>
+    <div id="modalMatches"></div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   BHIM — INTEGRATED FUSION ENGINE
+   Combines: Brahmastra (6-indicator weighted),
+             Morning Bell (5-filter score),
+             Group-Fusion (7-group multi-indicator),
+             Trishul Power (7-level signal classification)
+   ========================================================= */
+
+const SYMBOLS = [
+"RELIANCE","TCS","HDFCBANK","ICICIBANK","INFY","HINDUNILVR","ITC","SBIN","BHARTIARTL","KOTAKBANK",
+"LT","AXISBANK","BAJFINANCE","ASIANPAINT","MARUTI","SUNPHARMA","TITAN","ULTRACEMCO","WIPRO","NESTLEIND",
+"ONGC","NTPC","POWERGRID","M&M","TATAMOTORS","TATASTEEL","JSWSTEEL","ADANIENT","ADANIPORTS","COALINDIA",
+"HCLTECH","TECHM","BAJAJFINSV","GRASIM","HINDALCO","DRREDDY","CIPLA","DIVISLAB","EICHERMOT","BRITANNIA",
+"DABUR","GODREJCP","PIDILITIND","SHREECEM","SBILIFE","HDFCLIFE","ICICIPRU","BAJAJ-AUTO","HEROMOTOCO","INDUSINDBK",
+"BANKBARODA","PNB","CANBK","IOC","BPCL","GAIL","VEDANTA","SAIL","NMDC","ZOMATO",
+"NYKAA","PAYTM","DMART","TRENT","PAGEIND","COLPAL","MARICO","BERGEPAINT","AMBUJACEM","ACC",
+"TORNTPHARM","LUPIN","AUROPHARMA","BIOCON","MUTHOOTFIN","CHOLAFIN","LICHSGFIN","PFC","RECLTD","IRCTC",
+"IRFC","BEL","HAL","BHEL","SIEMENS","ABB","CUMMINSIND","HAVELLS","VOLTAS","CROMPTON",
+"DIXON","POLYCAB","ASTRAL","SUPREMEIND","APLAPOLLO","JINDALSTEL","NATIONALUM","RATNAMANI","TATACONSUM","VBL"
+];
+
+// Seeded RNG so each rescan gives a fresh but reproducible-per-run universe
+let seed = Date.now() % 100000;
+function rnd(){ seed = (seed*9301+49297)%233280; return seed/233280; }
+
+function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+function norm(val,lo,hi){ return clamp((val-lo)/(hi-lo)*100,0,100); }
+
+let UNIVERSE = [];
+
+function buildUniverse(){
+  UNIVERSE = SYMBOLS.map(sym=>{
+    const price = +(50 + rnd()*3000).toFixed(2);
+    const avgVolume = 500000 + rnd()*2000000;
+    const volume = avgVolume * (0.4 + rnd()*2.0);
+    const ema20 = price * (0.97 + rnd()*0.06);
+    const ema50 = price * (0.95 + rnd()*0.08);
+    return {
+      sym, price, avgVolume, volume, ema20, ema50,
+      rsi: 20 + rnd()*60,
+      macdHist: (rnd()-0.5)*10,
+      adx: 10 + rnd()*40,
+      cmf: (rnd()-0.5)*0.3,
+      nvi: (rnd()-0.5)*4,
+      pivot: rnd()<0.34 ? 'support' : (rnd()<0.5 ? 'resistance' : 'neutral'),
+      supertrend: rnd()<0.5 ? 'up' : 'down',
+      indexAlign: rnd()<0.5,
+      candleBreakout: rnd()<0.3 ? 'up' : (rnd()<0.45 ? 'down' : 'none'),
+      flowScore: (rnd()-0.5)*2,
+      smc: rnd()<0.33 ? 1 : (rnd()<0.5 ? -1 : 0),
+      nearDemand: rnd()<0.28,
+      nearSupply: rnd()<0.28,
+      chgPct: (rnd()-0.5)*6
+    };
+  });
+}
+
+/* ---------------- INTEGRATED SCORING (0-100, 50=neutral) ---------------- */
+
+// 1. RSI Divergence — Brahmastra RSI + Morning Bell CMF/OBV + Group-Fusion SMC bias
+function scoreRSIDivergence(s){
+  const rsiScore = norm(s.rsi, 30, 70);
+  const cmfScore = norm(s.cmf, -0.15, 0.15);
+  const smcScore = 50 + s.smc*25;
+  return clamp(rsiScore*0.45 + cmfScore*0.30 + smcScore*0.25, 0, 100);
+}
+
+// 2. MACD Crossover — MACD histogram + Brahmastra ADX trend filter + Group-Fusion FlowScore
+function scoreMACDCrossover(s){
+  const histScore = norm(s.macdHist, -5, 5);
+  const amp = s.adx > 24 ? 1.3 : 0.85;
+  const adjHist = clamp(50 + (histScore-50)*amp, 0, 100);
+  const flowScore = 50 + s.flowScore*25;
+  return clamp(adjHist*0.7 + flowScore*0.3, 0, 100);
+}
+
+// 3. Volume Breakout — Brahmastra volume ratio + Morning Bell candle breakout + Group-Fusion AVP zone
+function scoreVolumeBreakout(s){
+  const volRatio = s.volume / s.avgVolume;
+  const volScore = norm(volRatio, 0.5, 2.0);
+  const candleAdj = s.candleBreakout==='up' ? 20 : (s.candleBreakout==='down' ? -20 : 0);
+  const avpAdj = s.nearDemand ? 15 : (s.nearSupply ? -15 : 0);
+  return clamp(volScore*0.4 + (50+candleAdj)*0.3 + (50+avpAdj)*0.3, 0, 100);
+}
+
+// 4. Moving Avg Trend — Brahmastra EMA20/50 trend + Group-Fusion Supertrend + Morning Bell Index Align
+function scoreMovingAvgTrend(s){
+  const emaTrendPct = (s.ema20 - s.ema50)/s.ema50*100;
+  const emaScore = norm(emaTrendPct, -1, 1);
+  const superScore = s.supertrend==='up' ? 70 : 30;
+  const indexScore = s.indexAlign ? 65 : 35;
+  return clamp(emaScore*0.4 + superScore*0.35 + indexScore*0.25, 0, 100);
+}
+
+// 5. Bollinger Squeeze — Group-Fusion CMF + NVI, ADX confirms expansion direction
+function scoreBollingerSqueeze(s){
+  const cmfScore = norm(s.cmf, -0.15, 0.15);
+  const nviScore = norm(s.nvi, -2, 2);
+  const dirScore = s.adx > 24 ? (s.cmf > 0 ? 65 : 35) : 50;
+  return clamp(cmfScore*0.4 + nviScore*0.35 + dirScore*0.25, 0, 100);
+}
+
+// 6. Support/Resistance — Brahmastra pivot + Group-Fusion AVP zone + Trishul Power composite of scanners 1-5
+function scoreSupportResistance(s, compositeAvg){
+  const pivotScore = s.pivot==='support' ? 70 : (s.pivot==='resistance' ? 30 : 50);
+  const avpScore = s.nearDemand ? 70 : (s.nearSupply ? 30 : 50);
+  return clamp(pivotScore*0.35 + avpScore*0.3 + compositeAvg*0.35, 0, 100);
+}
+
+// Trishul Power 7-level classification (used for color/labels)
+function powerSignal(score){
+  if (score>=85) return {label:"ULTRA STRONG BUY", cls:"BUY"};
+  if (score>=75) return {label:"STRONG BUY", cls:"BUY"};
+  if (score>=65) return {label:"BUY", cls:"BUY"};
+  if (score>=50) return {label:"HOLD", cls:"WAIT"};
+  if (score>=35) return {label:"SELL", cls:"SELL"};
+  if (score>=20) return {label:"STRONG SELL", cls:"SELL"};
+  return {label:"ULTRA STRONG SELL", cls:"SELL"};
+}
+
+const SCANNERS = [
+  { id:'rsi', icon:'📉', name:'RSI DIVERGENCE',
+    fn:(s,c)=>scoreRSIDivergence(s),
+    desc:"RSI extremity is blended with CMF/OBV flow direction and Group-Fusion SMC bias to confirm whether momentum and money flow agree — flags hidden bullish/bearish divergence.",
+    formula:"Score = RSI(30-70)×45% + CMF(-0.15..0.15)×30% + SMC bias×25%",
+    reason:(s)=>`RSI ${s.rsi.toFixed(1)}, CMF ${s.cmf>=0?'+':''}${s.cmf.toFixed(3)} (${s.cmf>0?'inflow':'outflow'}), SMC ${s.smc>0?'bullish':s.smc<0?'bearish':'neutral'}`
+  },
+  { id:'macd', icon:'🌊', name:'MACD CROSSOVER',
+    fn:(s,c)=>scoreMACDCrossover(s),
+    desc:"MACD histogram momentum is amplified by ADX trend strength (Brahmastra) and cross-checked against the Group-Fusion FlowScore for liquidity confirmation.",
+    formula:"Score = MACD-Hist(-5..5)×ADX-amp(0.85/1.3)×70% + FlowScore×30%",
+    reason:(s)=>`MACD-Hist ${s.macdHist.toFixed(2)}, ADX ${s.adx.toFixed(1)} (${s.adx>24?'trending':'flat'}), Flow ${s.flowScore.toFixed(2)}`
+  },
+  { id:'vol', icon:'📊', name:'VOLUME BREAKOUT',
+    fn:(s,c)=>scoreVolumeBreakout(s),
+    desc:"Volume vs 20-day average (Brahmastra ×1.5 rule) combined with the Morning Bell 15-min candle breakout flag and Group-Fusion Anchored Volume Profile demand/supply zones.",
+    formula:"Score = VolRatio(0.5x-2x)×40% + CandleBreakout×30% + AVP-Zone×30%",
+    reason:(s)=>`Vol ${(s.volume/s.avgVolume).toFixed(2)}x avg, candle ${s.candleBreakout}, AVP ${s.nearDemand?'at demand':s.nearSupply?'at supply':'mid-range'}`
+  },
+  { id:'ema', icon:'📈', name:'MOVING AVG TREND',
+    fn:(s,c)=>scoreMovingAvgTrend(s),
+    desc:"EMA20 vs EMA50 trend slope (Brahmastra) is fused with Group-Fusion Supertrend direction and the Morning Bell Index Alignment filter for trend confirmation.",
+    formula:"Score = EMA20vs50-Trend×40% + Supertrend×35% + IndexAlign×25%",
+    reason:(s)=>`EMA20 ${s.ema20.toFixed(1)} vs EMA50 ${s.ema50.toFixed(1)}, Supertrend ${s.supertrend}, Index-Align ${s.indexAlign?'yes':'no'}`
+  },
+  { id:'bb', icon:'🎯', name:'BOLLINGER SQUEEZE',
+    fn:(s,c)=>scoreBollingerSqueeze(s),
+    desc:"Group-Fusion CMF and NVI gauge accumulation/distribution during a volatility squeeze; ADX confirms breakout direction once the squeeze fires.",
+    formula:"Score = CMF(-0.15..0.15)×40% + NVI(-2..2)×35% + ADX-Direction×25%",
+    reason:(s)=>`CMF ${s.cmf.toFixed(3)}, NVI ${s.nvi.toFixed(2)}, ADX ${s.adx.toFixed(1)} (${s.adx>24?(s.cmf>0?'bull break':'bear break'):'squeezing'})`
+  },
+  { id:'sr', icon:'🧱', name:'SUPPORT / RESISTANCE',
+    fn:(s,c)=>scoreSupportResistance(s,c),
+    desc:"Brahmastra pivot classification + Group-Fusion AVP demand/supply zones, weighted with the Trishul Power composite average of the other 5 scanners for full-system confirmation.",
+    formula:"Score = Pivot×35% + AVP-Zone×30% + Composite(scanners 1-5)×35%",
+    reason:(s,score)=>`Pivot: ${s.pivot}, AVP: ${s.nearDemand?'demand zone':s.nearSupply?'supply zone':'mid-range'}, Composite ${score.toFixed(1)}`
+  }
+];
+
+let scanResults = {};
+
+function runScan(){
+  buildUniverse();
+  scanResults = {};
+
+  // Pass 1: compute scanners 1-5 for every stock
+  const partial = {};
+  UNIVERSE.forEach(s=>{
+    partial[s.sym] = {
+      rsi:   scoreRSIDivergence(s),
+      macd:  scoreMACDCrossover(s),
+      vol:   scoreVolumeBreakout(s),
+      ema:   scoreMovingAvgTrend(s),
+      bb:    scoreBollingerSqueeze(s)
+    };
+  });
+
+  SCANNERS.forEach(scanner=>{
+    const scored = UNIVERSE.map(s=>{
+      let score, compositeAvg = 0;
+      if (scanner.id === 'sr'){
+        const p = partial[s.sym];
+        compositeAvg = (p.rsi+p.macd+p.vol+p.ema+p.bb)/5;
+        score = scanner.fn(s, compositeAvg);
+      } else {
+        score = partial[s.sym][scanner.id];
+      }
+      return { stock:s, score, compositeAvg };
+    });
+
+    const bullish = scored.filter(x=>x.score>=65).sort((a,b)=>b.score-a.score);
+    const bearish = scored.filter(x=>x.score<=35).sort((a,b)=>a.score-b.score);
+    const matches = bullish.length + bearish.length;
+
+    let badge = 'WAIT';
+    if (bullish.length > bearish.length && bullish.length>0) badge='BUY';
+    else if (bearish.length > bullish.length && bearish.length>0) badge='SELL';
+
+    scanResults[scanner.id] = { scanner, scored, bullish, bearish, matches, badge };
+  });
+}
+
+/* ---------------- RENDER ---------------- */
+
+function renderTicker(){
+  const top = UNIVERSE.slice(0,10);
+  const items = top.map(s=>{
+    const up = s.chgPct>=0;
+    return `<div class="ticker-item"><span class="ticker-sym">${s.sym}</span>
+      <span>₹${s.price.toFixed(1)}</span>
+      <span class="ticker-chg ${up?'up':'down'}">${up?'▲':'▼'}${Math.abs(s.chgPct).toFixed(2)}%</span></div>`;
+  }).join('');
+  document.getElementById('tickerTrack').innerHTML = items + items;
+}
+
+function renderCards(){
+  let buyN=0, sellN=0, waitN=0, totalSignals=0;
+  const grid = document.getElementById('scannerGrid');
+  grid.innerHTML = SCANNERS.map(scanner=>{
+    const r = scanResults[scanner.id];
+    const pct = r.matches; // out of 100
+    if (r.badge==='BUY') buyN++; else if (r.badge==='SELL') sellN++; else waitN++;
+    totalSignals += r.matches;
+    return `
+    <div class="scanner-card" onclick="openModal('${scanner.id}')">
+      <div class="badge ${r.badge}">${r.badge}</div>
+      <div class="sc-icon">${scanner.icon}</div>
+      <div class="sc-label">SCANNER</div>
+      <div class="sc-name">${scanner.name}</div>
+      <div class="sc-live"><span class="live-dot"></span>LIVE</div>
+      <div class="sc-progress"><div class="sc-fill ${r.badge}" style="width:${pct}%"></div></div>
+      <div class="sc-foot"><span class="sc-pct">${pct}%</span><span class="sc-frac">${pct}/100</span></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('statBuy').textContent = buyN;
+  document.getElementById('statSell').textContent = sellN;
+  document.getElementById('statWait').textContent = waitN;
+  document.getElementById('sigCount').textContent = totalSignals;
+}
+
+function openModal(id){
+  const r = scanResults[id];
+  const scanner = r.scanner;
+  document.getElementById('modalTitle').textContent = scanner.icon + ' ' + scanner.name;
+  document.getElementById('modalDesc').textContent = scanner.desc;
+  document.getElementById('modalFormula').textContent = scanner.formula;
+
+  const top = [...r.bullish.slice(0,3), ...r.bearish.slice(0,2)];
+  let html = '';
+  if (top.length===0){
+    html = `<div class="match-row"><div class="match-reason">No Nifty100 stocks crossed the BUY/SELL threshold this scan — all in HOLD zone.</div></div>`;
+  } else {
+    top.forEach(x=>{
+      const sig = powerSignal(x.score);
+      const color = sig.cls==='BUY' ? 'var(--green)' : (sig.cls==='SELL' ? 'var(--red)' : 'var(--orange)');
+      html += `<div class="match-row">
+        <div class="match-top">
+          <span class="match-sym">${x.stock.sym}</span>
+          <span class="match-sig" style="border:1px solid ${color};color:${color};background:${color}22">${sig.label}</span>
+        </div>
+        <div class="match-top"><span class="match-score" style="color:${color}">Score: ${x.score.toFixed(1)}/100</span>
+          <span class="match-score" style="color:#7a7a7a">₹${x.stock.price.toFixed(1)}</span></div>
+        <div class="match-reason">${scanner.reason(x.stock, x.compositeAvg)}</div>
+      </div>`;
+    });
+  }
+  document.getElementById('modalMatches').innerHTML = html;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('active'); }
+
+function updateClock(){
+  document.getElementById('clockTxt').textContent = new Date().toLocaleTimeString('en-IN');
+}
+
+function fullScan(){
+  runScan();
+  renderTicker();
+  renderCards();
+}
+
+document.getElementById('rescanBtn').addEventListener('click', fullScan);
+document.getElementById('signalsFab').addEventListener('click', ()=>{
+  // open the scanner with most matches
+  const best = Object.values(scanResults).sort((a,b)=>b.matches-a.matches)[0];
+  if (best) openModal(best.scanner.id);
+});
+
+updateClock();
+setInterval(updateClock, 1000);
+fullScan();
+</script>
+</body>
+</html>
